@@ -1,0 +1,16 @@
+# Real credentials — NEVER commit these
+credentials.json
+
+# SCM activity-log exports (may contain scanned content / PII)
+ai_security_airs_api_intercept*.csv
+*.csv
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+.env
+
+# macOS
+.DS_Store
