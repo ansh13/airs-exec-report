@@ -32,6 +32,21 @@ pip install -r requirements.txt
 # or:  pip install streamlit pandas model-security-client
 ```
 
+> **The `model-security-client` SDK is optional.** It powers only the **Model Scanning** pillar, and it is **not on public PyPI** — it installs from the Palo Alto private pip index (see below). If it isn't installed, the dashboard still runs; the Model Scanning section just shows a notice while API-Intercept and Red-Teaming work normally. Requires Python < 3.13.
+>
+> To enable Model Scanning, obtain the private index URL via the OAuth exchange, then:
+> ```bash
+> # 1) bearer token
+> TOKEN=$(curl -s -X POST "https://auth.apps.paloaltonetworks.com/oauth2/access_token" \
+>   -u "CLIENT_ID:CLIENT_SECRET" -d "grant_type=client_credentials" -d "scope=tsg_id:TSG_ID" \
+>   | python3 -c "import sys,json;print(json.load(sys.stdin)['access_token'])")
+> # 2) exchange for the pip index URL
+> curl -s -H "Authorization: Bearer $TOKEN" \
+>   "https://api.sase.paloaltonetworks.com/aims/mgmt/v1/pypi/authenticate"
+> # 3) install from that index
+> pip install "model-security-client[gcp]==1.1.1" --extra-index-url <URL_FROM_STEP_2>
+> ```
+
 ---
 
 ## Setup

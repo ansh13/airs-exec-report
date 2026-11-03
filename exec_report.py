@@ -259,21 +259,31 @@ st.divider()
 
 # --- 2. Model Scanning ---
 st.header("Model Scanning")
-with st.spinner("Loading model scans…"):
-    ms = load_model_scanning(days)
-v = ms["verd"]
-a, b, cc, dd, ee = st.columns(5)
-a.metric("Total scans", ms["total"])
-b.metric("Allowed", v.get("ALLOWED", 0))
-cc.metric("Allowed w/ alerts", ms["allowed_alerts"])
-dd.metric("Blocked", v.get("BLOCKED", 0))
-ee.metric("Unique models", ms["models"])
-if ms["reasons"]:
-    st.caption("Top violation reasons (occurrences)")
-    st.bar_chart(pd.DataFrame(ms["reasons"].most_common(6), columns=["Rule", "Count"]).set_index("Rule"),
-                 horizontal=True)
-else:
-    st.info("No violations in this window.")
+try:
+    with st.spinner("Loading model scans…"):
+        ms = load_model_scanning(days)
+except ModuleNotFoundError:
+    ms = None
+    st.warning("Model Scanning unavailable: the `model-security-client` SDK isn't installed. This pillar "
+               "is optional — the others work without it. To enable it, install the SDK from the Palo Alto "
+               "private pip index (see README). The other two pillars are unaffected.")
+except Exception as e:
+    ms = None
+    st.warning(f"Model Scanning unavailable: {e}")
+if ms:
+    v = ms["verd"]
+    a, b, cc, dd, ee = st.columns(5)
+    a.metric("Total scans", ms["total"])
+    b.metric("Allowed", v.get("ALLOWED", 0))
+    cc.metric("Allowed w/ alerts", ms["allowed_alerts"])
+    dd.metric("Blocked", v.get("BLOCKED", 0))
+    ee.metric("Unique models", ms["models"])
+    if ms["reasons"]:
+        st.caption("Top violation reasons (occurrences)")
+        st.bar_chart(pd.DataFrame(ms["reasons"].most_common(6), columns=["Rule", "Count"]).set_index("Rule"),
+                     horizontal=True)
+    else:
+        st.info("No violations in this window.")
 
 st.divider()
 
