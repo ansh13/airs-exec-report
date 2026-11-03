@@ -27,10 +27,40 @@ Cross-platform — runs on both Windows and macOS.
 - A Prisma SASE **service account** with access to the AIRS APIs
 - (Optional, for the API-Intercept pillar) an SCM activity-log CSV export
 
+### Install (use a virtual environment)
+
+A virtual environment keeps these packages isolated and avoids the macOS
+"externally-managed-environment" (PEP 668) error. **Create it with Python 3.11–3.13**
+(not 3.14, or the Model Scanning SDK won't install).
+
+**macOS / Linux**
+
 ```bash
+# use an explicit 3.12 (or 3.11/3.13) so you don't accidentally get 3.14
+python3.12 -m venv .venv
+source .venv/bin/activate
 pip install -r requirements.txt
-# or:  pip install streamlit pandas model-security-client
 ```
+
+**Windows (PowerShell)**
+
+```powershell
+py -3.12 -m venv .venv
+.\.venv\Scripts\Activate.ps1
+pip install -r requirements.txt
+```
+
+**Windows (Command Prompt)**
+
+```bat
+py -3.12 -m venv .venv
+.\.venv\Scripts\activate.bat
+pip install -r requirements.txt
+```
+
+Once active, your prompt shows `(.venv)`. Re-activate it (the `source ...` /
+`Activate` line) in each new terminal before running the app. Run `deactivate`
+when you're done.
 
 > **The `model-security-client` SDK is optional and auto-installs.** It powers only the **Model Scanning** pillar, and it is **not on public PyPI** — it installs from the Palo Alto private pip index. If it isn't present when you open the dashboard, the app **automatically fetches the private index URL (using your `credentials.json`) and pip-installs the SDK into the running environment, then reloads** — no action needed. If the install can't succeed (most commonly because you're on **Python 3.14**, which the SDK doesn't support), the Model Scanning section shows a notice and the other two pillars keep working. The SDK supports Python **3.11–3.13**.
 >
@@ -44,7 +74,7 @@ pip install -r requirements.txt
 > curl -s -H "Authorization: Bearer $TOKEN" \
 >   "https://api.sase.paloaltonetworks.com/aims/mgmt/v1/pypi/authenticate"
 > # 3) install from that index
-> pip install "model-security-client[gcp]==1.1.1" --extra-index-url <URL_FROM_STEP_2>
+> pip install "model-security-client[gcp]>=1.1.1,<2" --extra-index-url <URL_FROM_STEP_2>
 > ```
 
 ---
