@@ -91,6 +91,10 @@ def install_model_security_sdk():
     req.add_header("Authorization", "Bearer " + get_token())
     req.add_header("Accept", "application/json")
     index_url = json.load(urllib.request.urlopen(req, timeout=60))["url"]
+    # Drop any broken public-PyPI stub first — its version=None poisons pip's
+    # resolver and makes the real install fail. No-op if nothing is installed.
+    subprocess.run([sys.executable, "-m", "pip", "uninstall", "-y", "model-security-client"],
+                   capture_output=True, text=True)
     cmd = [sys.executable, "-m", "pip", "install",
            "model-security-client[gcp]>=1.1.1,<2", "--extra-index-url", index_url]
     return subprocess.run(cmd, capture_output=True, text=True)

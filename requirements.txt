@@ -1,3 +1,6 @@
 streamlit
 pandas
-model-security-client
+# model-security-client is intentionally NOT listed here.
+# It is NOT on public PyPI (the public name is a broken 0.0.1 stub with
+# version=None that poisons pip's resolver). The app installs the REAL SDK
+# from the Palo Alto private index automatically on first run — see README.

@@ -42,6 +42,8 @@ source .venv/bin/activate
 pip install -r requirements.txt
 ```
 
+> `requirements.txt` deliberately installs **only** `streamlit` and `pandas`. Do **not** `pip install model-security-client` from public PyPI — that name is a broken stub. The real SDK installs automatically from the private index on first run (see below).
+
 **Windows (PowerShell)**
 
 ```powershell
