@@ -23,7 +23,7 @@ Cross-platform — runs on both Windows and macOS.
 
 ## Prerequisites
 
-- Python 3.12
+- Python 3.11, 3.12, or 3.13 (the Model Scanning SDK does not support 3.14)
 - A Prisma SASE **service account** with access to the AIRS APIs
 - (Optional, for the API-Intercept pillar) an SCM activity-log CSV export
 
@@ -32,7 +32,7 @@ pip install -r requirements.txt
 # or:  pip install streamlit pandas model-security-client
 ```
 
-> **The `model-security-client` SDK is optional and auto-installs.** It powers only the **Model Scanning** pillar, and it is **not on public PyPI** — it installs from the Palo Alto private pip index. If it isn't present when you open the dashboard, the app **automatically fetches the private index URL (using your `credentials.json`) and pip-installs the SDK into the running environment, then reloads** — no action needed. If the install can't succeed (most commonly because you're on Python 3.13+), the Model Scanning section shows a notice and the other two pillars keep working. Requires Python < 3.13.
+> **The `model-security-client` SDK is optional and auto-installs.** It powers only the **Model Scanning** pillar, and it is **not on public PyPI** — it installs from the Palo Alto private pip index. If it isn't present when you open the dashboard, the app **automatically fetches the private index URL (using your `credentials.json`) and pip-installs the SDK into the running environment, then reloads** — no action needed. If the install can't succeed (most commonly because you're on **Python 3.14**, which the SDK doesn't support), the Model Scanning section shows a notice and the other two pillars keep working. The SDK supports Python **3.11–3.13**.
 >
 > If you ever need to install it manually, obtain the private index URL via the OAuth exchange, then:
 > ```bash

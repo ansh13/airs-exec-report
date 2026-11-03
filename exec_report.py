@@ -92,7 +92,7 @@ def install_model_security_sdk():
     req.add_header("Accept", "application/json")
     index_url = json.load(urllib.request.urlopen(req, timeout=60))["url"]
     cmd = [sys.executable, "-m", "pip", "install",
-           "model-security-client[gcp]==1.1.1", "--extra-index-url", index_url]
+           "model-security-client[gcp]>=1.1.1,<2", "--extra-index-url", index_url]
     return subprocess.run(cmd, capture_output=True, text=True)
 
 
@@ -280,8 +280,8 @@ except ModuleNotFoundError:
     if st.session_state.get("sdk_install_tried"):
         # already auto-installed once this session and it still won't import
         st.warning("Model Scanning unavailable: the `model-security-client` SDK could not be made "
-                   "importable (it requires Python < 3.13 — run in a 3.12 venv). The other two pillars "
-                   "are unaffected.")
+                   "importable. It supports Python 3.11–3.13 (not 3.14) — run the dashboard in e.g. a "
+                   "3.12 venv. The other two pillars are unaffected.")
     else:
         st.session_state["sdk_install_tried"] = True        # guard: install at most once per session
         with st.spinner("Model Scanning SDK not found — installing it automatically…"):
@@ -296,7 +296,8 @@ except ModuleNotFoundError:
                     st.rerun()                              # reload; import should now succeed
                 else:
                     st.warning("Model Scanning unavailable — auto-install failed "
-                               "(the SDK requires Python < 3.13). The other two pillars are unaffected.")
+                               "(the SDK supports Python 3.11–3.13, not 3.14). "
+                               "The other two pillars are unaffected.")
                     st.code((out.stdout + "\n" + out.stderr)[-3000:])
 except Exception as e:
     ms = None
