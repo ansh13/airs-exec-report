@@ -16,7 +16,7 @@ RUN  (Python 3.12):
     pip install streamlit pandas model-security-client
     streamlit run scripts/exec_report.py
 """
-import os, re, glob, json, uuid, csv, sys, datetime as dt, urllib.request, urllib.parse, urllib.error, base64
+import os, re, glob, json, uuid, csv, sys, subprocess, importlib, datetime as dt, urllib.request, urllib.parse, urllib.error, base64
 from collections import Counter, defaultdict
 csv.field_size_limit(sys.maxsize)   # log rows carry full scanned content in "Text Records"
 import streamlit as st
@@ -81,6 +81,19 @@ def api_get(path):
     req.add_header("Authorization", "Bearer " + get_token())
     req.add_header("Accept", "application/json")
     return json.load(urllib.request.urlopen(req, timeout=60))
+
+
+# ── 2b. install the Model Scanning SDK on demand (not on public PyPI) ──────────
+# The model-security-client package lives on a private pip index. We fetch a
+# short-lived authenticated index URL via OAuth, then pip-install into THIS env.
+def install_model_security_sdk():
+    req = urllib.request.Request(SASE + "/aims/mgmt/v1/pypi/authenticate")
+    req.add_header("Authorization", "Bearer " + get_token())
+    req.add_header("Accept", "application/json")
+    index_url = json.load(urllib.request.urlopen(req, timeout=60))["url"]
+    cmd = [sys.executable, "-m", "pip", "install",
+           "model-security-client[gcp]==1.1.1", "--extra-index-url", index_url]
+    return subprocess.run(cmd, capture_output=True, text=True)
 
 
 # ── 3. data loaders ───────────────────────────────────────────────────────────
@@ -264,9 +277,27 @@ try:
         ms = load_model_scanning(days)
 except ModuleNotFoundError:
     ms = None
-    st.warning("Model Scanning unavailable: the `model-security-client` SDK isn't installed. This pillar "
-               "is optional — the others work without it. To enable it, install the SDK from the Palo Alto "
-               "private pip index (see README). The other two pillars are unaffected.")
+    if st.session_state.get("sdk_install_tried"):
+        # already auto-installed once this session and it still won't import
+        st.warning("Model Scanning unavailable: the `model-security-client` SDK could not be made "
+                   "importable (it requires Python < 3.13 — run in a 3.12 venv). The other two pillars "
+                   "are unaffected.")
+    else:
+        st.session_state["sdk_install_tried"] = True        # guard: install at most once per session
+        with st.spinner("Model Scanning SDK not found — installing it automatically…"):
+            try:
+                out = install_model_security_sdk()
+            except Exception as e:
+                st.warning(f"Model Scanning unavailable — auto-install could not start: {e}")
+            else:
+                if out.returncode == 0:
+                    importlib.invalidate_caches()           # make the fresh package importable
+                    st.cache_data.clear()
+                    st.rerun()                              # reload; import should now succeed
+                else:
+                    st.warning("Model Scanning unavailable — auto-install failed "
+                               "(the SDK requires Python < 3.13). The other two pillars are unaffected.")
+                    st.code((out.stdout + "\n" + out.stderr)[-3000:])
 except Exception as e:
     ms = None
     st.warning(f"Model Scanning unavailable: {e}")
