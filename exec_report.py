@@ -227,6 +227,23 @@ def load_api_intercept(path, mtime, days):
 
 # ── 4. UI ─────────────────────────────────────────────────────────────────────
 st.set_page_config(page_title="EXL-AIRS Weekly Report", layout="wide")
+# Hide all Streamlit chrome (Deploy button, top-right menu, status icon, header
+# bar, and footer) for everyone, regardless of how the app is launched —
+# self-contained, does not rely on a .streamlit/config.toml.
+st.markdown(
+    """
+    <style>
+      [data-testid='stAppDeployButton'] {display: none;}   /* "Deploy" button      */
+      [data-testid='stToolbar']         {display: none;}   /* top-right toolbar     */
+      [data-testid='stStatusWidget']    {display: none;}   /* "Running…" status icon */
+      [data-testid='stDecoration']      {display: none;}   /* colored top gradient  */
+      #MainMenu                         {visibility: hidden;}  /* hamburger menu    */
+      header                            {visibility: hidden;}  /* whole header bar  */
+      footer                            {visibility: hidden;}  /* "Made with Streamlit" */
+    </style>
+    """,
+    unsafe_allow_html=True,
+)
 st.title("EXL-AIRS Weekly Report")
 
 CREDS = load_credentials()
