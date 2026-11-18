@@ -1,6 +1,6 @@
 # AIRS Executive Report
 
-A single-page **Streamlit** dashboard that pulls together the three Prisma AIRS pillars into one executive-level view, for a selectable time window:
+Pulls together the three Prisma AIRS pillars into one executive-level view, for a selectable time window:
 
 | Pillar | Source | Mode |
 |---|---|---|
@@ -12,12 +12,63 @@ A single-page **Streamlit** dashboard that pulls together the three Prisma AIRS 
 
 Cross-platform — runs on both Windows and macOS.
 
+## Two ways to run it
+
+| Script | Output | Best for |
+|---|---|---|
+| **`html_report.py`** | A single **self-contained `.html` file** | Sharing/emailing a point-in-time report, running headless in CI, no browser server needed — **see [Standalone HTML report](#standalone-html-report-html_reportpy)** |
+| `exec_report.py` | A live **Streamlit** dashboard in your browser | Interactive exploration with a refresh button and a time-window selector |
+
+Both read the same credentials, the same CSV export, and cover the same three pillars. Pick the HTML one if you just want a file to hand to someone; pick Streamlit if you want to click around.
+
 ---
 
 ## Why these three run differently
 
 - **Model Scanning** and **Red-Teaming** have queryable APIs, so the dashboard pulls them live over a time window.
 - **API-Intercept** (AI Runtime Security) has **no time-range query API**, so this pillar reads an SCM **Log Viewer CSV export** instead. One scan = many CSV rows (one per detector subtype); the script dedupes by `Scan ID` for scan-level counts.
+
+---
+
+## Standalone HTML report (`html_report.py`)
+
+Generates **one self-contained HTML file** covering all three pillars — no Streamlit, no server, nothing to keep running. Open the file in any browser, email it, or archive it. The two live pillars (Model Scanning, Red-Teaming) need `credentials.json` and network access; the API-Intercept pillar reads a CSV export. Each pillar **degrades gracefully** to an "unavailable" note if its inputs are missing, so the report always renders.
+
+### Quick start
+
+```bash
+# newest CSV in the folder, last 7 days, writes ./airs_report.html
+python3 html_report.py
+
+# explicit CSV + 7-day window
+python3 html_report.py "ai_security_airs_api_intercept_2026-11-16.csv" --days 7
+
+# group API-Intercept by a different column and write somewhere specific
+python3 html_report.py export.csv --group-by "AI Application Name" --out /tmp/report.html
+```
+
+### Command-line options
+
+| Flag | Purpose | Default |
+|---|---|---|
+| `csv_path` (positional) | API-Intercept CSV export to read | newest `ai_security_airs_api_intercept*.csv` in the script/run folder |
+| `--days N` | Time window for **all three** pillars | `7` |
+| `--group-by COL` | Column to group API-Intercept by | `API Key Name` |
+| `--creds PATH` | Path to `credentials.json` | looked up in script folder, then cwd |
+| `--out PATH` | Output HTML file path | `airs_report.html` next to the script |
+
+### How the `--days` window applies
+
+`--days` now filters **all three pillars consistently**:
+
+- **Model Scanning** and **Red-Teaming** query their APIs with the time range directly.
+- **API-Intercept** filters the CSV rows by the **`Time Generated`** column, keeping only rows within the window. The source line in the report shows how many rows were excluded, e.g. *"last 3 days (1,446,776 of 1,500,000 rows outside window excluded)"*.
+- If an **older CSV export has no `Time Generated` column**, the API-Intercept pillar falls back to showing the full export (no date filter) rather than failing. In that case, export a CSV already scoped to your window.
+
+### Prerequisites specific to the HTML script
+
+- **API-Intercept** works on **any** Python 3 — it only uses the standard library + your CSV.
+- **Model Scanning + Red-Teaming** need `credentials.json`, network access, and (for Model Scanning) the private SDK, which requires **Python 3.11–3.13** (not 3.14). See [Install](#install-use-a-virtual-environment) below.
 
 ---
 

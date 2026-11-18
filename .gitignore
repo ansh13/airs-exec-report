@@ -5,6 +5,11 @@ credentials.json
 ai_security_airs_api_intercept*.csv
 *.csv
 
+# Generated reports (may contain tenant data: API key names, violations, models)
+airs_report.html
+airs_report_interactive.html
+report.html
+
 # Python
 __pycache__/
 *.py[cod]
