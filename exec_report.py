@@ -39,6 +39,11 @@ CSV_DIRS = [os.path.dirname(os.path.abspath(__file__)), os.getcwd()]   # script 
 CSV_GLOB = "ai_security_airs_api_intercept*.csv"          # newest match wins
 ENV_CSV  = "API_INTERCEPT_CSV"                            # optional explicit path override
 
+# API Key Names to omit from the API-Intercept pillar (lower-cased for matching).
+# Keeps dev/test traffic out of the report and in sync with the standalone
+# html_report.py default.
+EXCLUDE_GROUPS = {"duggie-dev-test_app"}
+
 # Cache lifetimes (seconds)
 TTL_TOKEN = 1800                                          # OAuth token
 TTL_DATA  = 600                                           # pillar data loaders
@@ -174,24 +179,26 @@ def _parse_ts(s):
 
 @st.cache_data(ttl=TTL_DATA)
 def load_api_intercept(path, mtime, days):
-    since = dt.datetime.now(dt.timezone.utc) - dt.timedelta(days=days)
     scan = {}                      # scan_id -> (verdict, action, key_name, model, env)
                                    #   verdict/action aggregated with precedence across the scan's rows
     sev_rows = Counter()           # severity -> fired-row count
     gsev = defaultdict(Counter)    # guardrail -> {severity: count}  tenant-wide (excludes traffic)
     hit_scans = set()              # scans with >=1 detector hit
     tmin = tmax = None
-    with open(path, newline="", encoding="utf-8", errors="ignore") as fh:
+    # No time filtering — process ALL rows so the result is deterministic (depends
+    # only on the file, not on when it runs). Dedup by Scan ID; exclude dev/test key.
+    with open(path, newline="", encoding="utf-8", errors="replace") as fh:
         r = csv.DictReader(fh)
         for row in r:
-            ts = _parse_ts(row.get("Time Generated"))
-            if ts is None or ts < since:
-                continue
-            tmin = ts if tmin is None or ts < tmin else tmin
-            tmax = ts if tmax is None or ts > tmax else tmax
-            sid = row.get("Scan ID")
             key_name = (row.get("API Key Name") or "").strip() \
                        or (row.get("AI Application Name") or "").strip()   # fallback for older exports
+            if key_name.lower() in EXCLUDE_GROUPS:
+                continue
+            ts = _parse_ts(row.get("Time Generated"))
+            if ts is not None:
+                tmin = ts if tmin is None or ts < tmin else tmin
+                tmax = ts if tmax is None or ts > tmax else tmax
+            sid = row.get("Scan ID")
             verdict = row.get("Verdict", "").strip()
             action = row.get("Action", "").strip()
             prev = scan.get(sid)
@@ -248,13 +255,14 @@ st.title("EXL-AIRS Weekly Report")
 
 CREDS = load_credentials()
 if not CREDS:
-    st.error(f"No credentials. Put **{CREDS_FILE}** in the folder you run this script from, "
-             'with: {"client_id": "...", "client_secret": "...", "tsg_id": "..."}')
-    st.stop()
+    # No credentials is NOT fatal: the API-Intercept pillar reads a CSV and needs
+    # none. Only the live pillars (Model Scanning, Red-Teaming) are skipped.
+    st.warning(f"No **{CREDS_FILE}** found — the live pillars (Model Scanning, Red-Teaming) "
+               "will be skipped. The API-Intercept pillar (SCM CSV export) works without credentials.")
 
-days = WINDOW_OPTIONS[WINDOW_DEFAULT]   # fixed time window (no user selector)
-since_str = (dt.date.today() - dt.timedelta(days=days)).isoformat()
-st.caption(f"Tenant {CREDS['tsg_id']}  ·  Last {days} days (since {since_str})  ·  Generated {dt.date.today()}")
+days = WINDOW_OPTIONS[WINDOW_DEFAULT]   # window for the LIVE pillars only (API-Intercept = all logs)
+tenant = CREDS["tsg_id"] if CREDS else "—"
+st.caption(f"Tenant {tenant}  ·  API-Intercept: all logs in export (no time filter)  ·  Generated {dt.date.today()}")
 
 # --- 1. API-Intercept ---
 st.header("API-Intercept (AI Runtime Security)")
@@ -294,6 +302,8 @@ st.divider()
 # --- 2. Model Scanning ---
 st.header("Model Scanning")
 try:
+    if not CREDS:
+        raise RuntimeError("no credentials.json — live pillar skipped")
     with st.spinner("Loading model scans…"):
         ms = load_model_scanning(days)
 except ModuleNotFoundError:
@@ -343,6 +353,8 @@ st.divider()
 # --- 3. Red-Teaming ---
 st.header("Red-Teaming")
 try:
+    if not CREDS:
+        raise RuntimeError("no credentials.json — live pillar skipped")
     with st.spinner("Loading red-teaming…"):
         rt = load_red_teaming(days)
 except urllib.error.HTTPError as e:
